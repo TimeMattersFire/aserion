@@ -1,4 +1,5 @@
 import Sidebar from "./components/Sidebar";
+import DashboardHeader from "./components/dashboard/DashboardHeader";
 export default function Home() {
   
   return (
@@ -9,28 +10,7 @@ export default function Home() {
 
         {/* MAIN COCKPIT */}
         <section className="flex-1 p-8 lg:p-10">
-          <header className="flex items-start justify-between border-b border-neutral-800 pb-7">
-            <div>
-              <p className="text-xs font-semibold tracking-[0.2em] text-[#C51F2A]">
-                DIRECTOR COCKPIT
-              </p>
-
-              <h2 className="mt-2 text-3xl font-semibold">
-                Operational Overview
-              </h2>
-
-              <p className="mt-2 text-sm text-neutral-500">
-                Current business, project and assurance position.
-              </p>
-            </div>
-
-            <div className="text-right">
-              <p className="text-xs text-neutral-500">SYSTEM STATUS</p>
-              <p className="mt-1 text-sm font-medium text-white">
-                Development Environment
-              </p>
-            </div>
-          </header>
+          <DashboardHeader />
 
           {/* ATTENTION */}
           <section className="mt-8">
