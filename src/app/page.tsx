@@ -3,6 +3,7 @@ import DashboardHeader from "./components/dashboard/DashboardHeader";
 import AttentionRequired from "./components/dashboard/AttentionRequired";
 import KpiGrid from "./components/dashboard/KpiGrid";
 import LowerGrid from "./components/dashboard/LowerGrid";
+import QuickActions from "./components/dashboard/QuickActions";
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#0B0B0C] text-white">
