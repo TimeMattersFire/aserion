@@ -219,9 +219,13 @@ export default function BoundaryDetailPage() {
               ) : (
                 <div className="mt-6 grid gap-4">
                   {penetrations.map((penetration) => (
-                    <article
+                    <button
                       key={penetration.id}
-                      className="rounded-lg border border-neutral-800 bg-neutral-950 p-5"
+                      type="button"
+                      onClick={() =>
+                        router.push(`/penetration/${penetration.id}`)
+                      }
+                      className="w-full rounded-lg border border-neutral-800 bg-neutral-950 p-5 text-left transition hover:border-neutral-600 hover:bg-neutral-900"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-6">
                         <div>
@@ -240,11 +244,17 @@ export default function BoundaryDetailPage() {
                           </p>
                         </div>
 
-                        <p className="text-xs font-semibold tracking-wider text-neutral-500">
-                          {penetration.status || "NO STATUS"}
-                        </p>
+                        <div className="text-right">
+                          <p className="text-xs font-semibold tracking-wider text-neutral-500">
+                            {penetration.status || "NO STATUS"}
+                          </p>
+
+                          <p className="mt-4 text-sm text-neutral-500">
+                            Open penetration →
+                          </p>
+                        </div>
                       </div>
-                    </article>
+                    </button>
                   ))}
                 </div>
               )}
