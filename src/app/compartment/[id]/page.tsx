@@ -203,9 +203,13 @@ export default function CompartmentDetailPage() {
               ) : (
                 <div className="mt-6 grid gap-4">
                   {boundaries.map((boundary) => (
-                    <article
+                    <button
                       key={boundary.id}
-                      className="rounded-lg border border-neutral-800 bg-neutral-950 p-5"
+                      type="button"
+                      onClick={() =>
+                        router.push(`/boundary/${boundary.id}`)
+                      }
+                      className="w-full rounded-lg border border-neutral-800 bg-neutral-950 p-5 text-left transition hover:border-neutral-600"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-6">
                         <div>
@@ -262,7 +266,7 @@ export default function CompartmentDetailPage() {
                           </p>
                         </div>
                       </div>
-                    </article>
+                    </button>
                   ))}
                 </div>
               )}
