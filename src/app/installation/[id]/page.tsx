@@ -38,6 +38,22 @@ type Inspection = {
   is_current: boolean | null;
 };
 
+type Certificate = {
+  id: string;
+  legacy_certificate_id: string | null;
+  certificate_number: string | null;
+  certificate_type: string | null;
+  issue_date: string | null;
+  status: string | null;
+  revision_number: number | null;
+  is_current: boolean | null;
+};
+
+type EligibilityResult = {
+  eligible: boolean;
+  reasons: string[] | null;
+};
+
 type PhotoEvidence = {
   photo_evidence_id: string;
   job_id: string;
@@ -99,6 +115,14 @@ export default function InstallationPage() {
   const [sow, setSow] = useState<ScopeOfWorks | null>(null);
 
   const [inspections, setInspections] = useState<Inspection[]>([]);
+
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
+
+  const [eligibility, setEligibility] =
+    useState<EligibilityResult | null>(null);
+
+  const [eligibilityAvailable, setEligibilityAvailable] =
+    useState(true);
 
   const [photoEvidence, setPhotoEvidence] = useState<
     PhotoEvidence[]
@@ -212,6 +236,56 @@ export default function InstallationPage() {
       }
 
       setInspections((inspectionData ?? []) as Inspection[]);
+
+      const {
+        data: eligibilityData,
+        error: eligibilityError,
+      } = await supabase.rpc("tmfp_certificate_eligibility", {
+        p_installation_id: installationData.id,
+      });
+
+      if (eligibilityError) {
+        setEligibilityAvailable(false);
+        setEligibility(null);
+      } else {
+        setEligibilityAvailable(true);
+
+        const firstEligibility = Array.isArray(eligibilityData)
+          ? eligibilityData[0]
+          : eligibilityData;
+
+        if (firstEligibility) {
+          setEligibility({
+            eligible: Boolean(firstEligibility.eligible),
+            reasons: Array.isArray(firstEligibility.reasons)
+              ? firstEligibility.reasons
+              : [],
+          });
+        } else {
+          setEligibility(null);
+        }
+      }
+
+      const {
+        data: certificateData,
+        error: certificateError,
+      } = await supabase
+        .from("certificates")
+        .select(
+          "id, legacy_certificate_id, certificate_number, certificate_type, issue_date, status, revision_number, is_current"
+        )
+        .eq("installation_id", installationData.id)
+        .order("revision_number", { ascending: false });
+
+      if (certificateError) {
+        setError(certificateError.message);
+        setLoading(false);
+        return;
+      }
+
+      setCertificates(
+        (certificateData ?? []) as unknown as Certificate[]
+      );
 
       const {
         data: evidenceData,
@@ -540,6 +614,142 @@ export default function InstallationPage() {
 
                   <p className="mt-5 text-sm font-medium text-red-400">
                     Open controlled Inspection →
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mb-10">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold">
+              Certification & Certificate Records
+            </h2>
+
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-white/50">
+              Current V5 certificate eligibility position and Certificate
+              records directly linked to this controlled installation.
+            </p>
+          </div>
+
+          {!eligibilityAvailable ? (
+            <div className="mb-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
+              <p className="font-semibold text-amber-300">
+                Eligibility decision unavailable
+              </p>
+              <p className="mt-2 text-sm leading-6 text-white/50">
+                The controlled V5 certificate eligibility engine could not
+                be executed in this session.
+              </p>
+            </div>
+          ) : eligibility ? (
+            <div
+              className={`mb-5 rounded-2xl border p-5 ${
+                eligibility.eligible
+                  ? "border-emerald-500/20 bg-emerald-500/5"
+                  : "border-red-500/20 bg-red-500/5"
+              }`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/40">
+                    Certificate Eligibility
+                  </p>
+                  <p
+                    className={`mt-2 text-xl font-semibold ${
+                      eligibility.eligible
+                        ? "text-emerald-300"
+                        : "text-red-300"
+                    }`}
+                  >
+                    {eligibility.eligible ? "ELIGIBLE" : "NOT ELIGIBLE"}
+                  </p>
+                </div>
+
+                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/60">
+                  {(eligibility.reasons ?? []).length} blocking{" "}
+                  {(eligibility.reasons ?? []).length === 1
+                    ? "reason"
+                    : "reasons"}
+                </span>
+              </div>
+
+              {(eligibility.reasons ?? []).length > 0 ? (
+                <div className="mt-4 space-y-2">
+                  {(eligibility.reasons ?? []).map((reason, index) => (
+                    <div
+                      key={`${reason}-${index}`}
+                      className="rounded-xl border border-red-500/10 bg-black/20 p-4"
+                    >
+                      <p className="text-sm leading-6 text-white/70">
+                        {reason}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 text-sm leading-6 text-white/50">
+                  The controlled eligibility engine returned no blocking
+                  reasons for this installation.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+              <p className="text-sm text-white/50">
+                No eligibility decision was returned.
+              </p>
+            </div>
+          )}
+
+          {certificates.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+              <p className="text-sm text-white/50">
+                No Certificate record is directly linked to this installation.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {certificates.map((certificate) => (
+                <button
+                  key={certificate.id}
+                  type="button"
+                  onClick={() => router.push(`/certificate/${certificate.id}`)}
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left transition hover:border-red-500/30 hover:bg-white/[0.05]"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="font-semibold text-white">
+                        {certificate.certificate_number ??
+                          certificate.legacy_certificate_id ??
+                          "Controlled Certificate"}
+                      </p>
+                      <p className="mt-1 text-sm text-white/50">
+                        {certificate.certificate_type ?? "Certificate"}
+                      </p>
+                    </div>
+
+                    <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/60">
+                      {certificate.status ?? "Status not recorded"}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 text-sm text-white/50 sm:grid-cols-3">
+                    <p>Issued: {formatDate(certificate.issue_date)}</p>
+                    <p>
+                      Revision:{" "}
+                      {certificate.revision_number ?? "Not recorded"}
+                    </p>
+                    <p>
+                      {certificate.is_current
+                        ? "Current Certificate"
+                        : "Historical Certificate"}
+                    </p>
+                  </div>
+
+                  <p className="mt-5 text-sm font-medium text-red-400">
+                    Open controlled Certificate →
                   </p>
                 </button>
               ))}
