@@ -153,9 +153,11 @@ export default function BuildingDetailPage() {
               ) : (
                 <div className="mt-6 grid gap-4">
                   {levels.map((level) => (
-                    <article
+                    <button
                       key={level.id}
-                      className="rounded-lg border border-neutral-800 bg-neutral-950 p-5"
+                      type="button"
+                      onClick={() => router.push(`/level/${level.id}`)}
+                      className="w-full rounded-lg border border-neutral-800 bg-neutral-950 p-5 text-left transition hover:border-neutral-600 hover:bg-neutral-900"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
@@ -176,11 +178,15 @@ export default function BuildingDetailPage() {
                           )}
                         </div>
 
-                        <span className="text-xs font-semibold tracking-wider text-neutral-500">
-                          {level.status || "NO STATUS"}
-                        </span>
+                        <div className="flex items-center gap-4">
+                          <span className="text-xs font-semibold tracking-wider text-neutral-500">
+                            {level.status || "NO STATUS"}
+                          </span>
+
+                          <span className="text-neutral-600">→</span>
+                        </div>
                       </div>
-                    </article>
+                    </button>
                   ))}
                 </div>
               )}
