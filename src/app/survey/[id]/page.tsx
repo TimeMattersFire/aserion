@@ -38,14 +38,32 @@ type LocationRecord = {
   status: string | null;
 };
 
+type ScopeOfWorksRecord = {
+  id: string;
+  legacy_sow_id: string | null;
+  description: string | null;
+  quantity: number | null;
+  status: string | null;
+  revision_number: number | null;
+  is_current: boolean | null;
+  issued_at: string | null;
+  approved_at: string | null;
+};
+
 export default function SurveyDetailPage() {
   const params = useParams();
   const router = useRouter();
 
   const surveyId = params.id as string;
 
-  const [survey, setSurvey] = useState<SurveyRecord | null>(null);
-  const [location, setLocation] = useState<LocationRecord | null>(null);
+  const [survey, setSurvey] = useState<SurveyRecord | null>(
+    null
+  );
+  const [location, setLocation] =
+    useState<LocationRecord | null>(null);
+  const [scopeOfWorks, setScopeOfWorks] =
+    useState<ScopeOfWorksRecord | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -90,8 +108,26 @@ export default function SurveyDetailPage() {
         return;
       }
 
+      const { data: sowData, error: sowError } =
+        await supabase
+          .from("scope_of_works")
+          .select(
+            "id, legacy_sow_id, description, quantity, status, revision_number, is_current, issued_at, approved_at"
+          )
+          .eq("survey_record_id", surveyData.id)
+          .order("revision_number", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+      if (sowError) {
+        setError(sowError.message);
+        setLoading(false);
+        return;
+      }
+
       setSurvey(surveyData);
       setLocation(locationData);
+      setScopeOfWorks(sowData);
       setLoading(false);
     }
 
@@ -389,15 +425,124 @@ export default function SurveyDetailPage() {
 
             <div className="my-8 border-t border-neutral-800" />
 
+            <section>
+              <h2 className="text-xl font-semibold">
+                Scope of Works
+              </h2>
+
+              <p className="mt-1 text-sm text-neutral-500">
+                Scope directly linked to this controlled survey
+                revision.
+              </p>
+
+              {scopeOfWorks ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(`/sow/${scopeOfWorks.id}`)
+                  }
+                  className="mt-6 w-full rounded-lg border border-neutral-800 bg-neutral-950 p-5 text-left transition hover:border-neutral-600 hover:bg-neutral-900"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-neutral-600">
+                        Scope Reference
+                      </p>
+
+                      <p className="mt-2 text-xl font-semibold text-white">
+                        {scopeOfWorks.legacy_sow_id ||
+                          "Scope of Works"}
+                      </p>
+
+                      <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-400">
+                        {scopeOfWorks.description ||
+                          "No scope description recorded"}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <p className="text-xs font-semibold tracking-wider text-red-500">
+                        {scopeOfWorks.status || "NO STATUS"}
+                      </p>
+
+                      <p className="mt-2 text-xs text-neutral-600">
+                        {scopeOfWorks.revision_number !== null
+                          ? `Revision ${scopeOfWorks.revision_number}`
+                          : "No revision"}
+                      </p>
+
+                      <p className="mt-1 text-xs text-neutral-600">
+                        {scopeOfWorks.is_current
+                          ? "CURRENT SOW RECORD"
+                          : "SUPERSEDED SOW RECORD"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid gap-4 border-t border-neutral-800 pt-5 sm:grid-cols-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-neutral-600">
+                        Quantity
+                      </p>
+
+                      <p className="mt-1 text-sm text-neutral-300">
+                        {scopeOfWorks.quantity ?? "Not recorded"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-neutral-600">
+                        Issued
+                      </p>
+
+                      <p className="mt-1 text-sm text-neutral-300">
+                        {formatDate(scopeOfWorks.issued_at)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-neutral-600">
+                        Approved
+                      </p>
+
+                      <p className="mt-1 text-sm text-neutral-300">
+                        {formatDate(scopeOfWorks.approved_at)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-5 text-sm font-medium text-red-400">
+                    Open controlled Scope of Works →
+                  </p>
+                </button>
+              ) : (
+                <div className="mt-6 rounded-lg border border-neutral-800 bg-neutral-950 p-5">
+                  <p className="text-sm font-semibold text-white">
+                    No Scope of Works exists for this survey
+                    revision.
+                  </p>
+
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-500">
+                    ASERION has not carried a Scope of Works
+                    forward from another survey revision. A scope
+                    must be directly linked to this controlled
+                    survey record before it is presented here.
+                  </p>
+                </div>
+              )}
+            </section>
+
+            <div className="my-8 border-t border-neutral-800" />
+
             <section className="pb-10">
               <h2 className="text-xl font-semibold">
                 Survey Assessment
               </h2>
 
               <p className="mt-1 text-sm text-neutral-500">
-                Recorded assessment information. These fields present
-                the controlled record and do not independently
-                determine compliance.
+                Recorded assessment information. These fields
+                present the controlled record and do not
+                independently determine compliance.
               </p>
 
               <div className="mt-6 grid gap-4 md:grid-cols-2">
