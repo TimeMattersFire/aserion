@@ -28,6 +28,16 @@ type AssuranceDecision = {
   required_action: string | null;
 };
 
+type CurrentSurvey = {
+  id: string;
+  legacy_survey_record_id: string | null;
+  revision_number: number | null;
+  status: string | null;
+  required_fire_rating: string | null;
+  survey_date: string | null;
+  is_current: boolean | null;
+};
+
 export default function PenetrationDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -42,6 +52,9 @@ export default function PenetrationDetailPage() {
 
   const [decision, setDecision] =
     useState<AssuranceDecision | null>(null);
+
+  const [currentSurvey, setCurrentSurvey] =
+    useState<CurrentSurvey | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -92,6 +105,7 @@ export default function PenetrationDetailPage() {
       }
 
       let decisionData: AssuranceDecision | null = null;
+      let surveyData: CurrentSurvey | null = null;
 
       if (locationData) {
         const {
@@ -113,11 +127,34 @@ export default function PenetrationDetailPage() {
         if (assuranceData && assuranceData.length > 0) {
           decisionData = assuranceData[0];
         }
+
+        const {
+          data: currentSurveyData,
+          error: currentSurveyError,
+        } = await supabase
+          .from("survey_records")
+          .select(
+            "id, legacy_survey_record_id, revision_number, status, required_fire_rating, survey_date, is_current"
+          )
+          .eq("location_id", locationData.id)
+          .eq("is_current", true)
+          .order("revision_number", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (currentSurveyError) {
+          setError(currentSurveyError.message);
+          setLoading(false);
+          return;
+        }
+
+        surveyData = currentSurveyData;
       }
 
       setPenetration(penetrationData);
       setLocation(locationData);
       setDecision(decisionData);
+      setCurrentSurvey(surveyData);
       setLoading(false);
     }
 
@@ -228,6 +265,92 @@ export default function PenetrationDetailPage() {
                   <p className="text-sm text-neutral-400">
                     No controlled location is linked to this
                     penetration.
+                  </p>
+                </div>
+              )}
+            </section>
+
+            <div className="my-8 border-t border-neutral-800" />
+
+            <section>
+              <h2 className="text-xl font-semibold">
+                Current Survey
+              </h2>
+
+              <p className="mt-1 text-sm text-neutral-500">
+                The current controlled survey record linked to
+                this location.
+              </p>
+
+              {currentSurvey ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(`/survey/${currentSurvey.id}`)
+                  }
+                  className="mt-6 w-full rounded-lg border border-neutral-800 bg-neutral-950 p-5 text-left transition hover:border-neutral-600 hover:bg-neutral-900"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-neutral-600">
+                        Survey Reference
+                      </p>
+
+                      <p className="mt-2 text-xl font-semibold">
+                        {currentSurvey.legacy_survey_record_id ||
+                          currentSurvey.id}
+                      </p>
+                    </div>
+
+                    <p className="text-xs font-semibold tracking-wider text-red-500">
+                      CURRENT RECORD
+                    </p>
+                  </div>
+
+                  <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-neutral-600">
+                        Revision
+                      </p>
+
+                      <p className="mt-1 text-sm text-neutral-300">
+                        {currentSurvey.revision_number ??
+                          "Not recorded"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-neutral-600">
+                        Status
+                      </p>
+
+                      <p className="mt-1 text-sm text-neutral-300">
+                        {currentSurvey.status ||
+                          "Not recorded"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-neutral-600">
+                        Required Fire Rating
+                      </p>
+
+                      <p className="mt-1 text-sm text-neutral-300">
+                        {currentSurvey.required_fire_rating ||
+                          "Not recorded"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-5 text-sm font-medium text-neutral-400">
+                    View controlled survey →
+                  </p>
+                </button>
+              ) : (
+                <div className="mt-6 rounded-lg border border-neutral-800 bg-neutral-950 p-5">
+                  <p className="text-sm text-neutral-400">
+                    No current controlled survey is linked to
+                    this location.
                   </p>
                 </div>
               )}
