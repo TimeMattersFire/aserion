@@ -42,6 +42,17 @@ type Ncr = {
   reinspection_required: boolean | null;
 };
 
+type Reinspection = {
+  id: string;
+  legacy_reinspection_id: string | null;
+  ncr_id: string;
+  reinspector_id: string | null;
+  reinspection_date: string | null;
+  result: string | null;
+  comments: string | null;
+  completed: boolean | null;
+  job_id: string | null;
+};
 type InspectionPhoto = {
   id: string;
   photo_stage: string | null;
@@ -126,6 +137,7 @@ export default function InspectionPage() {
   const [installation, setInstallation] =
     useState<Installation | null>(null);
   const [ncrs, setNcrs] = useState<Ncr[]>([]);
+  const [reinspections, setReinspections] = useState<Reinspection[]>([]);
   const [photos, setPhotos] = useState<InspectionPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -180,7 +192,7 @@ export default function InspectionPage() {
         return;
       }
 
-      const typedInspection = inspectionData as Inspection;
+      const typedInspection = inspectionData as unknown as Inspection;
       setInspection(typedInspection);
 
       if (typedInspection.installation_id) {
@@ -222,7 +234,33 @@ export default function InspectionPage() {
         .order("raised_date", { ascending: true });
 
       if (!ncrError && ncrData) {
-        setNcrs(ncrData as Ncr[]);
+        const controlledNcrs = ncrData as unknown as Ncr[];
+        setNcrs(controlledNcrs);
+
+        const ncrIds = controlledNcrs.map((ncr) => ncr.id);
+
+        if (ncrIds.length > 0) {
+          const { data: reinspectionData, error: reinspectionError } =
+            await supabase
+              .from("reinspections")
+              .select(`
+                id,
+                legacy_reinspection_id,
+                ncr_id,
+                reinspector_id,
+                reinspection_date,
+                result,
+                comments,
+                completed,
+                job_id
+              `)
+              .in("ncr_id", ncrIds)
+              .order("reinspection_date", { ascending: true });
+
+          if (!reinspectionError && reinspectionData) {
+            setReinspections(reinspectionData as Reinspection[]);
+          }
+        }
       }
 
       const {
@@ -645,6 +683,91 @@ export default function InspectionPage() {
                         {displayValue(ncr.reinspection_required)}
                       </p>
                     </div>
+                  </div>
+
+                  <div className="mt-5 border-t border-white/10 pt-5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-400">
+                      Controlled Reinspection
+                    </p>
+
+                    {reinspections.filter(
+                      (reinspection) => reinspection.ncr_id === ncr.id
+                    ).length === 0 ? (
+                      <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-4">
+                        <p className="text-sm text-zinc-300">
+                          No Reinspection record is directly linked to this NCR.
+                        </p>
+
+                        {ncr.reinspection_required && (
+                          <p className="mt-2 text-xs text-zinc-500">
+                            Reinspection is recorded as required, but no accessible controlled Reinspection record is linked to this NCR.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-3 grid gap-3">
+                        {reinspections
+                          .filter(
+                            (reinspection) =>
+                              reinspection.ncr_id === ncr.id
+                          )
+                          .map((reinspection) => (
+                            <button
+                              key={reinspection.id}
+                              type="button"
+                              onClick={() =>
+                                router.push(`/reinspection/${reinspection.id}`)
+                              }
+                              className="rounded-xl border border-white/10 bg-black/20 p-4 text-left transition hover:border-red-500/40 hover:bg-white/[0.03]"
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div>
+                                  <p className="font-medium">
+                                    {displayValue(
+                                      reinspection.legacy_reinspection_id
+                                    )}
+                                  </p>
+                                  <p className="mt-1 text-xs text-zinc-500">
+                                    {formatDate(
+                                      reinspection.reinspection_date
+                                    )}
+                                  </p>
+                                </div>
+
+                                <span className="text-sm text-red-400">
+                                  Open reinspection →
+                                </span>
+                              </div>
+
+                              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                <div>
+                                  <p className="text-xs text-zinc-500">
+                                    Result
+                                  </p>
+                                  <p className="mt-1 text-sm">
+                                    {displayValue(reinspection.result)}
+                                  </p>
+                                </div>
+
+                                <div>
+                                  <p className="text-xs text-zinc-500">
+                                    Completed
+                                  </p>
+                                  <p className="mt-1 text-sm">
+                                    {displayValue(reinspection.completed)}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {reinspection.comments && (
+                                <p className="mt-4 text-sm leading-6 text-zinc-400">
+                                  {reinspection.comments}
+                                </p>
+                              )}
+                            </button>
+                          ))}
+                      </div>
+                    )}
                   </div>
                 </article>
               ))}
