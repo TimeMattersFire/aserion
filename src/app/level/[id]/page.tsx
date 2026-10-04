@@ -60,13 +60,14 @@ export default function LevelDetailPage() {
         return;
       }
 
-      const { data: compartmentData, error: compartmentError } = await supabase
-        .from("fire_compartments")
-        .select(
-          "id, compartment_code, compartment_name, compartment_type, description, required_fire_resistance_minutes, status"
-        )
-        .eq("level_id", levelId)
-        .order("compartment_code");
+      const { data: compartmentData, error: compartmentError } =
+        await supabase
+          .from("fire_compartments")
+          .select(
+            "id, compartment_code, compartment_name, compartment_type, description, required_fire_resistance_minutes, status"
+          )
+          .eq("level_id", levelId)
+          .order("compartment_code");
 
       if (compartmentError) {
         setError(compartmentError.message);
@@ -170,9 +171,13 @@ export default function LevelDetailPage() {
               ) : (
                 <div className="mt-6 grid gap-4">
                   {compartments.map((compartment) => (
-                    <article
+                    <button
                       key={compartment.id}
-                      className="rounded-lg border border-neutral-800 bg-neutral-950 p-5"
+                      type="button"
+                      onClick={() =>
+                        router.push(`/compartment/${compartment.id}`)
+                      }
+                      className="w-full rounded-lg border border-neutral-800 bg-neutral-950 p-5 text-left transition hover:border-neutral-600 hover:bg-neutral-900"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-6">
                         <div>
@@ -198,24 +203,28 @@ export default function LevelDetailPage() {
                           )}
                         </div>
 
-                        <div className="text-right">
-                          <p className="text-xs uppercase tracking-wider text-neutral-600">
-                            Required Fire Resistance
-                          </p>
+                        <div className="flex items-center gap-5">
+                          <div className="text-right">
+                            <p className="text-xs uppercase tracking-wider text-neutral-600">
+                              Required Fire Resistance
+                            </p>
 
-                          <p className="mt-1 text-lg font-semibold">
-                            {compartment.required_fire_resistance_minutes !==
-                            null
-                              ? `${compartment.required_fire_resistance_minutes} min`
-                              : "Not recorded"}
-                          </p>
+                            <p className="mt-1 text-lg font-semibold">
+                              {compartment.required_fire_resistance_minutes !==
+                              null
+                                ? `${compartment.required_fire_resistance_minutes} min`
+                                : "Not recorded"}
+                            </p>
 
-                          <p className="mt-3 text-xs font-semibold tracking-wider text-neutral-500">
-                            {compartment.status || "NO STATUS"}
-                          </p>
+                            <p className="mt-3 text-xs font-semibold tracking-wider text-neutral-500">
+                              {compartment.status || "NO STATUS"}
+                            </p>
+                          </div>
+
+                          <span className="text-neutral-600">→</span>
                         </div>
                       </div>
-                    </article>
+                    </button>
                   ))}
                 </div>
               )}
