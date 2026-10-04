@@ -13,6 +13,7 @@ type Site = {
 
 export default function BuildingPage() {
   const router = useRouter();
+
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -70,6 +71,7 @@ export default function BuildingPage() {
             <p className="text-sm font-semibold text-red-400">
               Unable to load buildings
             </p>
+
             <p className="mt-2 text-sm text-neutral-400">{error}</p>
           </div>
         )}
@@ -83,24 +85,32 @@ export default function BuildingPage() {
         {!loading && !error && sites.length > 0 && (
           <div className="grid gap-4">
             {sites.map((site) => (
-              <article
+              <button
                 key={site.id}
-                className="rounded-lg border border-neutral-800 bg-neutral-950 p-5"
+                type="button"
+                onClick={() => router.push(`/building/${site.id}`)}
+                className="w-full rounded-lg border border-neutral-800 bg-neutral-950 p-5 text-left transition hover:border-neutral-600 hover:bg-neutral-900"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold">{site.site_name}</h2>
+                    <h2 className="text-lg font-semibold">
+                      {site.site_name}
+                    </h2>
 
                     <p className="mt-1 text-sm text-neutral-500">
                       {site.address || "No address recorded"}
                     </p>
                   </div>
 
-                  <span className="rounded border border-neutral-700 px-3 py-1 font-mono text-xs text-neutral-400">
-                    {site.legacy_site_id || "NO LEGACY REF"}
-                  </span>
+                  <div className="flex items-center gap-4">
+                    <span className="rounded border border-neutral-700 px-3 py-1 font-mono text-xs text-neutral-400">
+                      {site.legacy_site_id || "NO LEGACY REF"}
+                    </span>
+
+                    <span className="text-neutral-600">→</span>
+                  </div>
                 </div>
-              </article>
+              </button>
             ))}
           </div>
         )}
