@@ -26,6 +26,18 @@ type ScopeOfWorks = {
   revision_number: number | null;
 };
 
+type Inspection = {
+  id: string;
+  legacy_inspection_id: string | null;
+  inspection_date: string | null;
+  inspection_status: string | null;
+  compliance_status: string | null;
+  result: string | null;
+  inspection_sequence: number | null;
+  inspection_slot: number | null;
+  is_current: boolean | null;
+};
+
 type PhotoEvidence = {
   photo_evidence_id: string;
   job_id: string;
@@ -61,6 +73,20 @@ function formatDateTime(value: string | null) {
   });
 }
 
+function resultClasses(result: string | null) {
+  const normalized = result?.trim().toLowerCase();
+
+  if (normalized === "pass") {
+    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
+  }
+
+  if (normalized === "fail") {
+    return "border-red-500/30 bg-red-500/10 text-red-300";
+  }
+
+  return "border-white/10 bg-white/5 text-white/70";
+}
+
 export default function InstallationPage() {
   const params = useParams();
   const router = useRouter();
@@ -72,9 +98,11 @@ export default function InstallationPage() {
 
   const [sow, setSow] = useState<ScopeOfWorks | null>(null);
 
-  const [photoEvidence, setPhotoEvidence] = useState<PhotoEvidence[]>(
-    []
-  );
+  const [inspections, setInspections] = useState<Inspection[]>([]);
+
+  const [photoEvidence, setPhotoEvidence] = useState<
+    PhotoEvidence[]
+  >([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -155,6 +183,35 @@ export default function InstallationPage() {
 
         setSow(sowData);
       }
+
+      const {
+        data: inspectionData,
+        error: inspectionError,
+      } = await supabase
+        .from("inspections")
+        .select(
+          `
+          id,
+          legacy_inspection_id,
+          inspection_date,
+          inspection_status,
+          compliance_status,
+          result,
+          inspection_sequence,
+          inspection_slot,
+          is_current
+        `
+        )
+        .eq("installation_id", installationData.id)
+        .order("inspection_sequence", { ascending: true });
+
+      if (inspectionError) {
+        setError(inspectionError.message);
+        setLoading(false);
+        return;
+      }
+
+      setInspections((inspectionData ?? []) as Inspection[]);
 
       const {
         data: evidenceData,
@@ -373,6 +430,124 @@ export default function InstallationPage() {
         </section>
 
         <section className="mb-10">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">
+              Inspection Records
+            </h2>
+
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-white/50">
+              Inspection records directly linked to this controlled
+              installation. ASERION does not infer inspections from
+              another job, location or workflow record.
+            </p>
+          </div>
+
+          {inspections.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+              <p className="font-medium">
+                No Inspection record is linked to this Installation.
+              </p>
+
+              <p className="mt-2 text-sm leading-6 text-white/50">
+                An inspection must reference this installation
+                directly before it is presented here.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {inspections.map((inspection) => (
+                <button
+                  key={inspection.id}
+                  type="button"
+                  onClick={() =>
+                    router.push(`/inspection/${inspection.id}`)
+                  }
+                  className="w-full rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-left transition hover:border-white/20 hover:bg-white/[0.05]"
+                >
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/40">
+                        Inspection Reference
+                      </p>
+
+                      <p className="mt-2 text-lg font-semibold">
+                        {inspection.legacy_inspection_id ??
+                          "Inspection Record"}
+                      </p>
+
+                      <p className="mt-2 text-sm text-white/50">
+                        Inspection date:{" "}
+                        {formatDate(inspection.inspection_date)}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <span
+                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${resultClasses(
+                          inspection.result
+                        )}`}
+                      >
+                        Result: {inspection.result ?? "Not recorded"}
+                      </span>
+
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/70">
+                        {inspection.inspection_status ??
+                          "No status"}
+                      </span>
+
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/70">
+                        {inspection.is_current
+                          ? "Current record"
+                          : "Historical record"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid gap-4 border-t border-white/10 pt-5 sm:grid-cols-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.15em] text-white/40">
+                        Sequence
+                      </p>
+
+                      <p className="mt-2 text-sm text-white/80">
+                        {inspection.inspection_sequence ??
+                          "Not recorded"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.15em] text-white/40">
+                        Slot
+                      </p>
+
+                      <p className="mt-2 text-sm text-white/80">
+                        {inspection.inspection_slot ??
+                          "Not recorded"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.15em] text-white/40">
+                        Compliance Status
+                      </p>
+
+                      <p className="mt-2 text-sm text-white/80">
+                        {inspection.compliance_status ??
+                          "Not recorded"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-5 text-sm font-medium text-red-400">
+                    Open controlled Inspection →
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mb-10">
           <div className="mb-5">
             <h2 className="text-lg font-semibold">
               Installation Evidence
@@ -405,7 +580,9 @@ export default function InstallationPage() {
 
                       <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-white/60">
                         {photos.length}{" "}
-                        {photos.length === 1 ? "record" : "records"}
+                        {photos.length === 1
+                          ? "record"
+                          : "records"}
                       </span>
                     </div>
                   </div>
@@ -430,8 +607,8 @@ export default function InstallationPage() {
                             <div className="flex aspect-[4/3] w-full items-center justify-center rounded-xl border border-dashed border-white/15 bg-black/20 px-5 text-center">
                               <p className="text-xs leading-5 text-white/40">
                                 Private evidence file is not
-                                accessible through the current Storage
-                                policy.
+                                accessible through the current
+                                Storage policy.
                               </p>
                             </div>
                           )}
@@ -443,7 +620,8 @@ export default function InstallationPage() {
 
                           <div className="mt-3 space-y-1 text-xs text-white/40">
                             <p>
-                              Taken: {formatDateTime(photo.taken_at)}
+                              Taken:{" "}
+                              {formatDateTime(photo.taken_at)}
                             </p>
 
                             <p>
